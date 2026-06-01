@@ -1,0 +1,30 @@
+{
+  "name": "ta-calculator-backend",
+  "version": "1.0.0",
+  "description": "Secure API for 7th CPC TA Calculator",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "seed": "node scripts/seed.js",
+    "db:setup": "powershell -ExecutionPolicy Bypass -File .\\bootstrap.ps1",
+    "db:setup:raw": "node scripts/db-setup.js",
+    "migrate:rbac": "node scripts/migrate-rbac.js"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.11.3",
+    "helmet": "^7.0.0",
+    "express-rate-limit": "^6.7.0",
+    "morgan": "^1.10.0",
+    "qrcode": "^1.5.4",
+    "speakeasy": "^2.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
