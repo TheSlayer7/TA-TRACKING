@@ -2,7 +2,6 @@ import { useState } from 'react';
 import {
   LayoutDashboard, Users, BarChart3, Shield, ClipboardCheck,
   FileText, Plane, ChevronLeft, ChevronRight, LogOut, Sun, Moon,
-  Building2, BookOpen, ScrollText
 } from 'lucide-react';
 
 const navConfig = {
