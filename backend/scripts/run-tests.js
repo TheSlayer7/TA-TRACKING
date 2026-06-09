@@ -28,6 +28,7 @@ try {
   assert(approx(res2.totalAdmissible, 100 * 16), 'Mileage calculation mismatch');
 
   // Test 3: Daily allowance suppressed when food provided
+  //check
   const claim3 = {
     journeyDetails: { segments: [] },
     accommodation: { required: false },
