@@ -8,6 +8,8 @@ CREATE TABLE IF NOT EXISTS users (
   pay_level INTEGER NOT NULL CHECK (pay_level BETWEEN 1 AND 18),
   role TEXT NOT NULL DEFAULT 'TA' CHECK (role IN ('Admin', 'Faculty', 'TA')),
   department TEXT NOT NULL DEFAULT '',
+  department_id INTEGER,
+  manager_user_id INTEGER,
   active BOOLEAN NOT NULL DEFAULT TRUE,
   two_factor_enabled BOOLEAN NOT NULL DEFAULT FALSE,
   two_factor_secret TEXT,
@@ -16,6 +18,8 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS department TEXT NOT NULL DEFAULT '';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS department_id INTEGER;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS manager_user_id INTEGER;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT TRUE;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS two_factor_enabled BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS two_factor_secret TEXT;
@@ -108,6 +112,37 @@ CREATE INDEX IF NOT EXISTS idx_tasks_ta_status ON tasks (assigned_ta_id, status)
 CREATE INDEX IF NOT EXISTS idx_tasks_course_status ON tasks (course_id, status);
 CREATE INDEX IF NOT EXISTS idx_work_logs_ta_status ON work_logs (ta_user_id, status);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_actor_created_at ON audit_logs (actor_user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_users_manager_user_id ON users (manager_user_id);
+CREATE INDEX IF NOT EXISTS idx_users_department_id ON users (department_id);
+
+CREATE TABLE IF NOT EXISTS departments (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  code TEXT NOT NULL UNIQUE,
+  parent_department_id INTEGER REFERENCES departments(id) ON DELETE SET NULL,
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'users_department_id_fkey') THEN
+    ALTER TABLE users ADD CONSTRAINT users_department_id_fkey FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL;
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'users_manager_user_id_fkey') THEN
+    ALTER TABLE users ADD CONSTRAINT users_manager_user_id_fkey FOREIGN KEY (manager_user_id) REFERENCES users(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
+INSERT INTO departments (name, code)
+VALUES
+  ('Administration', 'ADMIN'),
+  ('Finance', 'FIN'),
+  ('Operations', 'OPS'),
+  ('Engineering', 'ENG')
+ON CONFLICT (code) DO NOTHING;
 
 INSERT INTO roles (name, description)
 VALUES

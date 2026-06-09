@@ -9,7 +9,8 @@
     "seed": "node scripts/seed.js",
     "db:setup": "powershell -ExecutionPolicy Bypass -File .\\bootstrap.ps1",
     "db:setup:raw": "node scripts/db-setup.js",
-    "migrate:rbac": "node scripts/migrate-rbac.js"
+    "migrate:rbac": "node scripts/migrate-rbac.js",
+    "test": "node scripts/run-tests.js"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",

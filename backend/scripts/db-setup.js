@@ -22,6 +22,27 @@ const users = [
   { name: 'Admin User', email: 'admin@siteimade.local', pay_level: 14, role: 'Admin', department: 'Administration' }
 ];
 
+const seedDepartments = async (client) => {
+  const departmentNames = [...new Set(users.map((user) => String(user.department || '').trim()).filter(Boolean))];
+
+  for (const name of departmentNames) {
+    const code = name.toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'DEPT';
+    await client.query(
+      `
+        INSERT INTO departments (name, code)
+        VALUES ($1, $2)
+        ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name, updated_at = NOW();
+      `,
+      [name, code]
+    );
+  }
+};
+
+const getDepartmentIdMap = async (client) => {
+  const result = await client.query('SELECT id, name FROM departments;');
+  return new Map(result.rows.map((row) => [row.name, row.id]));
+};
+
 const splitSqlStatements = (sql) => {
   const statements = [];
   let current = '';
@@ -167,26 +188,30 @@ async function seedUsers() {
 
   try {
     await seedRoles(client);
+    await seedDepartments(client);
+    const departmentIdMap = await getDepartmentIdMap(client);
 
     for (const user of users) {
       const plain = process.env.SEED_PASSWORD || 'Password123!';
       const hash = await bcrypt.hash(plain, 10);
       const role = normalizeRole(user.role);
+      const departmentId = departmentIdMap.get(String(user.department || '').trim()) || null;
 
       const userResult = await client.query(
         `
-          INSERT INTO users (name, email, password_hash, pay_level, role, department)
-          VALUES ($1, $2, $3, $4, $5, $6)
+          INSERT INTO users (name, email, password_hash, pay_level, role, department, department_id)
+          VALUES ($1, $2, $3, $4, $5, $6, $7)
           ON CONFLICT (email) DO UPDATE SET
             name = EXCLUDED.name,
             password_hash = EXCLUDED.password_hash,
             pay_level = EXCLUDED.pay_level,
             role = EXCLUDED.role,
             department = EXCLUDED.department,
+            department_id = EXCLUDED.department_id,
             updated_at = NOW()
           RETURNING id;
         `,
-        [user.name, user.email.toLowerCase(), hash, user.pay_level, role, user.department]
+        [user.name, user.email.toLowerCase(), hash, user.pay_level, role, user.department, departmentId]
       );
 
       await client.query(

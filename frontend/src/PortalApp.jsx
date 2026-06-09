@@ -51,100 +51,7 @@ const formatCurrency = (value) => new Intl.NumberFormat('en-IN', {
   maximumFractionDigits: 2
 }).format(Number(value || 0));
 
-function estimateClaim(payload, payLevel) {
-  const rates = {
-    hotelCeiling: {
-      level1to5: 563,
-      level6to8: 938,
-      level9to11: 2813,
-      level12to13: 5625,
-      level14plus: 9375
-    },
-    localTravel: {
-      level1to5: 141,
-      level6to8: 281,
-      level9to11: 423
-    },
-    taxiCeilings: {
-      calicutAirport: 1500,
-      calicutRailway: 1200,
-      keralaPerKm: 18,
-      keralaAutoPerKm: 15,
-      otherStatesPerKm: 30
-    },
-    mileageRate: {
-      ownVehicle: 16
-    }
-  };
-
-  const getEmployeeClass = (level) => {
-    if (level <= 5) return 'level1to5';
-    if (level <= 8) return 'level6to8';
-    if (level <= 11) return 'level9to11';
-    if (level <= 13) return 'level12to13';
-    return 'level14plus';
-  };
-
-  const employeeClass = getEmployeeClass(Number(payLevel || 0));
-  let total = 0;
-
-  (payload.journeyDetails?.segments || []).forEach((segment) => {
-    const claimedFare = Number(segment.fare || 0);
-    let segmentAmount = 0;
-
-    if (segment.mode === 'taxi' || segment.mode === 'road') {
-      if (segment.location === 'calicutAirport') {
-        segmentAmount = Math.min(claimedFare, rates.taxiCeilings.calicutAirport);
-      } else if (segment.location === 'calicutRailway') {
-        segmentAmount = Math.min(claimedFare, rates.taxiCeilings.calicutRailway);
-      } else {
-        const distance = Number(segment.distance || 0);
-        const isKerala = segment.state === 'kerala';
-        const isAuto = segment.vehicleType === 'auto';
-        let rate = rates.taxiCeilings.otherStatesPerKm;
-
-        if (isKerala) {
-          rate = isAuto ? rates.taxiCeilings.keralaAutoPerKm : rates.taxiCeilings.keralaPerKm;
-        }
-
-        segmentAmount = Math.min(claimedFare, distance * rate);
-      }
-    } else if (segment.mode === 'ownVehicle') {
-      const distance = Number(segment.distance || 0);
-      segmentAmount = distance * rates.mileageRate.ownVehicle;
-    } else {
-      segmentAmount = claimedFare;
-    }
-
-    total += segmentAmount;
-  });
-
-  if (payload.accommodation?.required) {
-    const nights = Number(payload.accommodation.nights || 0);
-    const actualCharges = Number(payload.accommodation.actualRoomCharges || 0);
-    const gstRate = Number(payload.accommodation.gstRate || 0);
-    const eligibleTotal = nights * rates.hotelCeiling[employeeClass];
-    const admissibleRoom = Math.min(actualCharges, eligibleTotal);
-    const admissibleGst = (admissibleRoom * gstRate) / 100;
-    total += admissibleRoom + admissibleGst;
-  }
-
-  if (payload.localTravel?.required) {
-    const days = Number(payload.localTravel.days || 0);
-    const actualCharges = Number(payload.localTravel.actualCharges || 0);
-    const kilometers = Number(payload.localTravel.kilometers || 0);
-
-    if (payLevel <= 11) {
-      total += days * rates.localTravel[employeeClass];
-    } else if (payLevel <= 13) {
-      total += kilometers > 50 ? (actualCharges / kilometers) * 50 : actualCharges;
-    } else {
-      total += actualCharges;
-    }
-  }
-
-  return Number(total.toFixed(2));
-}
+ import estimateClaim from './lib/taPolicy';
 
 const readStoredSession = () => {
   try {
@@ -1340,6 +1247,11 @@ function ClaimsPage() {
   const [localDays, setLocalDays] = useState(2);
   const [localKm, setLocalKm] = useState(46);
   const [localCharge, setLocalCharge] = useState(950);
+  const [dailyAllowanceRequired, setDailyAllowanceRequired] = useState(true);
+  const [absenceHours, setAbsenceHours] = useState(10);
+  const [foodProvided, setFoodProvided] = useState(false);
+  const [ownVehicleApproved, setOwnVehicleApproved] = useState(false);
+  const [airTravelApproved, setAirTravelApproved] = useState(false);
   const [otherCharges, setOtherCharges] = useState(750);
   const [remarks, setRemarks] = useState('');
   const [apiOutput, setApiOutput] = useState('Ready.');
@@ -1361,11 +1273,20 @@ function ClaimsPage() {
       kilometers: Number(localKm),
       actualCharges: Number(localCharge)
     },
+    dailyAllowance: {
+      required: dailyAllowanceRequired,
+      absenceHours: Number(absenceHours),
+      foodProvided: Boolean(foodProvided)
+    },
+    approvals: {
+      ownVehicleApproved: Boolean(ownVehicleApproved),
+      airTravelApproved: Boolean(airTravelApproved)
+    },
     otherCharges: {
       amount: Number(otherCharges),
       notes: remarks
     }
-  }), [journeyType, segments, accommodationRequired, hotelNights, hotelCharge, gstRate, localTravelRequired, localDays, localKm, localCharge, otherCharges, remarks]);
+  }), [journeyType, segments, accommodationRequired, hotelNights, hotelCharge, gstRate, localTravelRequired, localDays, localKm, localCharge, dailyAllowanceRequired, absenceHours, foodProvided, ownVehicleApproved, airTravelApproved, otherCharges, remarks]);
 
   const estimatedAdmissible = useMemo(() => estimateClaim(payload, payLevel), [payload, payLevel]);
 
@@ -1394,6 +1315,11 @@ function ClaimsPage() {
     setLocalDays(2);
     setLocalKm(46);
     setLocalCharge(950);
+    setDailyAllowanceRequired(true);
+    setAbsenceHours(10);
+    setFoodProvided(false);
+    setOwnVehicleApproved(false);
+    setAirTravelApproved(false);
     setOtherCharges(750);
     setRemarks('Sample data for testing the claim flow.');
   };
@@ -1512,8 +1438,65 @@ function ClaimsPage() {
                       <input type="text" value={segment.description} onChange={(event) => updateSegment(index, 'description', event.target.value)} placeholder="Optional" />
                     </div>
                   </div>
+
+                  <div className="field-grid two-up">
+                    <div className="field">
+                      <label>Travel Class</label>
+                      <select value={segment.travelClass || ''} onChange={(event) => updateSegment(index, 'travelClass', event.target.value)}>
+                        <option value="">Not set</option>
+                        <option value="business">Business</option>
+                        <option value="club">Club</option>
+                        <option value="economy">Economy</option>
+                        <option value="ac1">AC-I</option>
+                        <option value="ac2">AC-II</option>
+                        <option value="ac3">AC-III</option>
+                        <option value="ac-chair-car">AC Chair Car</option>
+                        <option value="first">First Class</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
               ))}
+            </div>
+          </section>
+
+          <section className="subpanel">
+            <div className="subpanel-head">
+              <h3>Approvals and Daily Allowance</h3>
+            </div>
+            <div className="field-grid two-up">
+              <div className="field">
+                <label htmlFor="absenceHours">Absence from HQ (hours)</label>
+                <input id="absenceHours" type="number" min="0" step="0.1" value={absenceHours} onChange={(event) => setAbsenceHours(Number(event.target.value))} />
+              </div>
+              <div className="field">
+                <label htmlFor="dailyAllowanceRequired">Daily Allowance</label>
+                <label className="toggle">
+                  <input id="dailyAllowanceRequired" type="checkbox" checked={dailyAllowanceRequired} onChange={(event) => setDailyAllowanceRequired(event.target.checked)} />
+                  <span>Required</span>
+                </label>
+              </div>
+              <div className="field">
+                <label htmlFor="foodProvided">Food Provided</label>
+                <label className="toggle">
+                  <input id="foodProvided" type="checkbox" checked={foodProvided} onChange={(event) => setFoodProvided(event.target.checked)} />
+                  <span>Yes</span>
+                </label>
+              </div>
+              <div className="field">
+                <label htmlFor="ownVehicleApproved">Own Vehicle Approved</label>
+                <label className="toggle">
+                  <input id="ownVehicleApproved" type="checkbox" checked={ownVehicleApproved} onChange={(event) => setOwnVehicleApproved(event.target.checked)} />
+                  <span>Approved</span>
+                </label>
+              </div>
+              <div className="field">
+                <label htmlFor="airTravelApproved">Air Travel Approved</label>
+                <label className="toggle">
+                  <input id="airTravelApproved" type="checkbox" checked={airTravelApproved} onChange={(event) => setAirTravelApproved(event.target.checked)} />
+                  <span>Approved</span>
+                </label>
+              </div>
             </div>
           </section>
 
@@ -1597,8 +1580,17 @@ function ClaimsPage() {
 
         <div className="estimate-row">
           <span>Estimated admissible amount</span>
-          <strong>{formatCurrency(estimatedAdmissible)}</strong>
+          <strong>{formatCurrency(estimatedAdmissible.totalAdmissible)}</strong>
         </div>
+
+        {estimatedAdmissible.warnings.length > 0 && (
+          <div className="mini-card wide-card">
+            <span>Policy warnings</span>
+            <div className="stack-list">
+              {estimatedAdmissible.warnings.map((warning) => <p key={warning} className="theme-note">{warning}</p>)}
+            </div>
+          </div>
+        )}
 
         <div className="mini-card wide-card">
           <span>Active user</span>

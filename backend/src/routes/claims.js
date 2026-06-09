@@ -18,9 +18,9 @@ router.post('/submit', verifyToken, async (req, res) => {
         const userId = req.user.id;
 
         // Recalculate strict admissible amount on the server
-        let totalAdmissible;
+        let calculation;
         try {
-            totalAdmissible = calculateAdmissibleTA(claimData, userPayLevel);
+            calculation = calculateAdmissibleTA(claimData, userPayLevel);
         } catch (calcErr) {
             console.error('Admissible calculation error:', calcErr);
             return res.status(400).json({ error: 'Invalid claim data for admissible calculation.' });
@@ -37,13 +37,14 @@ router.post('/submit', verifyToken, async (req, res) => {
         const totalClaimed = (parseFloat(claimData.otherCharges?.amount) || 0) +
             (parseFloat(claimData.accommodation?.actualRoomCharges) || 0);
 
-        const values = [userId, claimData.journeyDetails?.journeyType || 'tour', totalClaimed, totalAdmissible, JSON.stringify(claimData)];
+        const values = [userId, claimData.journeyDetails?.journeyType || 'tour', totalClaimed, calculation.totalAdmissible, JSON.stringify(claimData)];
         const dbResult = await db.query(queryText, values);
 
         res.status(201).json({
             message: "Claim submitted and securely validated.",
             claimId: dbResult.rows[0].id,
-            admissibleAmount: dbResult.rows[0].admissible_amount
+            admissibleAmount: dbResult.rows[0].admissible_amount,
+            warnings: calculation.warnings
         });
     } catch (error) {
         console.error("Submission Error:", error.stack || error);

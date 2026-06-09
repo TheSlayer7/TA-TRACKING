@@ -16,6 +16,8 @@ const buildUserPayload = (user) => ({
   pay_level: user.pay_level,
   role: normalizeRole(user.role),
   department: user.department || '',
+  department_id: user.department_id ?? null,
+  manager_user_id: user.manager_user_id ?? null,
   active: Boolean(user.active ?? true),
   permissions: Array.isArray(user.permissions) ? user.permissions : [],
   two_factor_enabled: Boolean(user.two_factor_enabled)
@@ -30,6 +32,8 @@ const signToken = (user) => {
       pay_level: user.pay_level,
       role: normalizeRole(user.role),
       department: user.department || '',
+      department_id: user.department_id ?? null,
+      manager_user_id: user.manager_user_id ?? null,
       active: Boolean(user.active ?? true),
       permissions: Array.isArray(user.permissions) ? user.permissions : [],
       two_factor_enabled: Boolean(user.two_factor_enabled)
@@ -54,9 +58,9 @@ const normalizeCode = (value) => String(value || '').replace(/\s+/g, '');
 
 const loginUserQuery = `
   SELECT u.id, u.name, u.email, u.password_hash, u.pay_level, u.role, u.department,
-         u.active, u.two_factor_enabled, u.two_factor_secret,
-         COALESCE(array_agg(DISTINCT p.code) FILTER (WHERE p.code IS NOT NULL), ARRAY[]::text[]) AS permissions,
-         (u.password_hash = crypt($2, u.password_hash)) AS crypt_match
+    u.active, u.two_factor_enabled, u.two_factor_secret,
+    COALESCE(array_agg(DISTINCT p.code) FILTER (WHERE p.code IS NOT NULL), ARRAY[]::text[]) AS permissions,
+    (u.password_hash = crypt($2, u.password_hash)) AS crypt_match
   FROM users u
   LEFT JOIN user_roles ur ON ur.user_id = u.id
   LEFT JOIN roles r ON r.id = ur.role_id
@@ -69,8 +73,8 @@ const loginUserQuery = `
 
 const profileUserQuery = `
   SELECT u.id, u.name, u.email, u.pay_level, u.role, u.department, u.active,
-         u.two_factor_enabled, u.two_factor_secret,
-         COALESCE(array_agg(DISTINCT p.code) FILTER (WHERE p.code IS NOT NULL), ARRAY[]::text[]) AS permissions
+    u.two_factor_enabled, u.two_factor_secret,
+    COALESCE(array_agg(DISTINCT p.code) FILTER (WHERE p.code IS NOT NULL), ARRAY[]::text[]) AS permissions
   FROM users u
   LEFT JOIN user_roles ur ON ur.user_id = u.id
   LEFT JOIN roles r ON r.id = ur.role_id
