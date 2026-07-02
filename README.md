@@ -78,30 +78,57 @@ flowchart LR
    npm install
    ```
 
-2. Create `backend/.env` with your database credentials and JWT secret. A typical setup looks like this:
+2. In pgAdmin, create a dedicated local PostgreSQL login role for this project. Do not use your superuser for the app.
+
+   - Right-click **Login/Group Roles** -> **Create** -> **Login/Group Role**.
+   - Set the name to something like `ta_app`.
+   - In **Definition**, set a strong password.
+   - In **Privileges**, enable **Can login** and **Create DB**.
+   - Leave **Superuser** disabled.
+
+3. Create the project database and make that role the owner.
+
+   - Right-click **Databases** -> **Create** -> **Database**.
+   - Set the database name to `ta_calculator`.
+   - Set **Owner** to the role you just created, for example `ta_app`.
+
+4. Create `backend/.env` with the non-superuser database credentials and a JWT secret. Use your own local values and keep the file out of version control.
 
    ```env
    PORT=5000
    DB_HOST=localhost
    DB_PORT=5432
-   DB_USER=postgres
-   DB_PASSWORD=your_password
+   DB_USER=ta_app
+   DB_PASSWORD=your_local_db_password
    DB_NAME=ta_calculator
-   JWT_SECRET=replace_with_a_long_random_secret
+   JWT_SECRET=your_long_random_jwt_secret
    ```
 
-3. Initialize the database and seed the demo data.
+   To generate a strong JWT secret quickly on Windows PowerShell:
+
+   ```powershell
+   [Convert]::ToBase64String([byte[]](1..64 | ForEach-Object { Get-Random -Maximum 256 }))
+   ```
+
+5. Initialize the database and seed the demo data.
 
    ```powershell
    npm run db:setup
    npm run seed
    ```
 
-4. Start the backend in development mode.
+6. Start the backend in development mode.
 
    ```powershell
    npm run dev
    ```
+
+If you prefer SQL instead of the pgAdmin UI, run this once while connected as a superuser, then switch to the new role for all project work. Replace the password placeholder with your own value:
+
+```sql
+CREATE ROLE ta_app LOGIN PASSWORD 'your_local_db_password' CREATEDB;
+CREATE DATABASE ta_calculator OWNER ta_app;
+```
 
 ## Frontend Setup
 
@@ -159,7 +186,7 @@ After seeding, you can sign in with these example users:
 ## Security Notes
 
 - Keep `.env` files, keys, and other secrets out of version control.
-- Use a strong `JWT_SECRET` value in local and deployed environments.
+- Use a strong randomly generated `JWT_SECRET` value in local and deployed environments.
 - Enable two-factor authentication for accounts that need additional protection.
 
 ## Optional Python Tooling

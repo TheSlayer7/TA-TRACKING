@@ -1,8 +1,8 @@
 <#
 Secure bootstrap wrapper for Windows PowerShell.
 
-Prompts for the `postgres` user's password (secure input), sets it temporarily
-in the `DB_PASSWORD` environment variable, runs `npm install` and
+Prompts for the local database user's password (secure input), sets it
+temporarily in the `DB_PASSWORD` environment variable, runs `npm install` and
 `npm run db:setup`, then clears the environment variable.
 
 Run from the repository root or from the `backend` folder:
@@ -16,8 +16,8 @@ param(
   [string]$NodeCmd = "C:\Program Files\nodejs\npm.cmd"
 )
 
-Write-Host "Postgres password required for user 'postgres' (input hidden)"
-$secure = Read-Host -Prompt 'Postgres password' -AsSecureString
+Write-Host "Database password required for your local PostgreSQL role (input hidden)"
+$secure = Read-Host -Prompt 'Database password' -AsSecureString
 
 # Convert SecureString to plain text for this process only
 $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)

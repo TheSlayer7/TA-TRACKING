@@ -31,7 +31,7 @@ const seedDepartments = async (client) => {
       `
         INSERT INTO departments (name, code)
         VALUES ($1, $2)
-        ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name, updated_at = NOW();
+        ON CONFLICT (name) DO UPDATE SET code = EXCLUDED.code, updated_at = NOW();
       `,
       [name, code]
     );
