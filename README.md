@@ -69,6 +69,35 @@ flowchart LR
 3. Start the backend API.
 4. Start the frontend app in a second terminal.
 
+## Faculty Handoff
+
+If you zip this repository and upload it to Google Drive, the simplest run path for your faculty is:
+
+1. Install Node.js and PostgreSQL.
+2. Open pgAdmin and create a non-superuser login role plus the `ta_calculator` database.
+3. Edit [backend/.env.example](backend/.env.example) as [backend/.env](backend/.env) and fill in `DB_PASSWORD` and `JWT_SECRET`.
+4. From the repository root, run:
+
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File .\setup.ps1
+   ```
+
+5. Start the app:
+
+   ```powershell
+   cd backend
+   npm run dev
+   ```
+
+   In a second terminal:
+
+   ```powershell
+   cd frontend
+   npm run dev
+   ```
+
+The database still needs one-time setup in pgAdmin, but everything else is kept in the repository so the run steps stay short.
+
 ## Backend Setup
 
 1. Install backend dependencies.
