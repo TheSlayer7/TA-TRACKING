@@ -69,9 +69,9 @@ flowchart LR
 3. Start the backend API.
 4. Start the frontend app in a second terminal.
 
-## Faculty Handoff
+## Help section to get started
 
-If you zip this repository and upload it to Google Drive, the simplest run path for your faculty is:
+If you zip this repository and upload it to Drive, the simplest run path for you is:
 
 1. Install Node.js and PostgreSQL.
 2. Open pgAdmin and create a non-superuser login role plus the `ta_calculator` database.
