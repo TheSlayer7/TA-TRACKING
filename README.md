@@ -14,7 +14,7 @@
 
 ## Overview
 
-TA Calculator is a full-stack travel allowance claim system with a Node.js API, a Vite + React frontend, PostgreSQL persistence, role-based access control, and optional two-factor authentication.
+TA Calculator is a full-stack travel allowance claim system with a Node.js API, a Vite + React frontend, PostgreSQL persistence, role-based access control, and optional two-factor authentication. Made for NIT Calicut, finance department under Centre for Research and Automation (CITRA) for Summer Internship.
 
 ## Screenshots
 
